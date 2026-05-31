@@ -1,0 +1,4 @@
+jdk:
+  - openjdk17
+install:
+  - ./gradlew :rv-page:publishToMavenLocal -PVERSION_NAME=$VERSION
