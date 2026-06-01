@@ -1,5 +1,6 @@
 package com.chat.rv_page
 
+import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -1541,12 +1542,17 @@ class RvPageBuilder private constructor(private val owner: LifecycleOwner) {
 
         /** item 间距(dp);0 = 紧贴。 */
         var itemSpacingDp: Int = 0
+        var edgeLeftDp: Int = 0
+        var edgeTopDp: Int = 0
+        var edgeRightDp: Int = 0
+        var edgeBottomDp: Int = 0
 
         /** 横向吸附模式;默认 [CarouselSnap.NONE]。 */
         var snap: CarouselSnap = CarouselSnap.NONE
 
         /** 跨 carousel 共享的 [RecyclerView.RecycledViewPool];不传则各自维护。 */
         var sharedPool: RecyclerView.RecycledViewPool? = null
+        var layoutManagerFactory: ((Context) -> RecyclerView.LayoutManager)? = null
 
         private var onBind: ((VB, T, Int) -> Unit)? = null
         private var onBindPayloads: ((VB, T, Int, MutableList<Any>) -> Unit)? = null
@@ -1574,6 +1580,10 @@ class RvPageBuilder private constructor(private val owner: LifecycleOwner) {
 
         fun onViewHolderCreated(block: (holder: BaseListAdapter.BindingHolder<VB>, binding: VB) -> Unit) {
             onViewHolderCreated = block
+        }
+
+        fun layoutManager(factory: (Context) -> RecyclerView.LayoutManager) {
+            layoutManagerFactory = factory
         }
 
         fun onItemClick(
@@ -1669,6 +1679,11 @@ class RvPageBuilder private constructor(private val owner: LifecycleOwner) {
                 paddingEndDp = paddingEndDp,
                 paddingBottomDp = paddingBottomDp,
                 itemSpacingDp = itemSpacingDp,
+                edgeLeftDp = edgeLeftDp,
+                edgeTopDp = edgeTopDp,
+                edgeRightDp = edgeRightDp,
+                edgeBottomDp = edgeBottomDp,
+                layoutManagerFactory = layoutManagerFactory,
                 snap = snap,
                 sharedPool = sharedPool
             )

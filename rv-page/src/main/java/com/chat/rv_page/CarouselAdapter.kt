@@ -1,12 +1,15 @@
 package com.chat.rv_page
 
-import android.graphics.Rect
-import android.view.View
+import android.content.Context
+import android.util.AttributeSet
+import android.view.MotionEvent
+import android.view.ViewParent
 import android.view.ViewGroup
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.LinearSnapHelper
 import androidx.recyclerview.widget.PagerSnapHelper
 import androidx.recyclerview.widget.RecyclerView
+import com.chat.pagingutil.SpacingItemDecoration
 
 /**
  * carousel section 的外层承载 Adapter:对外 0/1 个 item,该 item 是一个横向 RecyclerView,
@@ -20,6 +23,11 @@ internal class CarouselAdapter<T : Any>(
     private val paddingEndDp: Int,
     private val paddingBottomDp: Int,
     private val itemSpacingDp: Int,
+    private val edgeLeftDp: Int,
+    private val edgeTopDp: Int,
+    private val edgeRightDp: Int,
+    private val edgeBottomDp: Int,
+    private val layoutManagerFactory: ((Context) -> RecyclerView.LayoutManager)?,
     private val snap: CarouselSnap,
     private val sharedPool: RecyclerView.RecycledViewPool?
 ) : RecyclerView.Adapter<CarouselAdapter.RowHolder>() {
@@ -52,17 +60,31 @@ internal class CarouselAdapter<T : Any>(
         val density = ctx.resources.displayMetrics.density
         fun dp(v: Int): Int = if (v <= 0) 0 else (v * density + 0.5f).toInt()
 
-        val rv = RecyclerView(ctx).apply {
+        val rv = NestedCarouselRecyclerView(ctx).apply {
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 if (heightDp > 0) dp(heightDp) else ViewGroup.LayoutParams.WRAP_CONTENT
             )
-            layoutManager = LinearLayoutManager(ctx, LinearLayoutManager.HORIZONTAL, false)
+            layoutManager = layoutManagerFactory?.invoke(ctx)
+                ?: LinearLayoutManager(ctx, LinearLayoutManager.HORIZONTAL, false)
+            isNestedScrollingEnabled = false
             setPadding(dp(paddingStartDp), dp(paddingTopDp), dp(paddingEndDp), dp(paddingBottomDp))
             clipToPadding = false
             sharedPool?.let { setRecycledViewPool(it) }
             val spacingPx = dp(itemSpacingDp)
-            if (spacingPx > 0) addItemDecoration(HorizontalSpacingDecoration(spacingPx))
+            val edgeLeftPx = dp(edgeLeftDp)
+            val edgeTopPx = dp(edgeTopDp)
+            val edgeRightPx = dp(edgeRightDp)
+            val edgeBottomPx = dp(edgeBottomDp)
+            if (spacingPx > 0 || edgeLeftPx > 0 || edgeTopPx > 0 || edgeRightPx > 0 || edgeBottomPx > 0) {
+                SpacingItemDecoration.builder()
+                    .itemSpacing(spacingPx)
+                    .edgeLeft(edgeLeftPx)
+                    .edgeTop(edgeTopPx)
+                    .edgeRight(edgeRightPx)
+                    .edgeBottom(edgeBottomPx)
+                    .attachRecyclerView(this)
+            }
             when (snap) {
                 CarouselSnap.NONE -> Unit
                 CarouselSnap.LINEAR -> LinearSnapHelper().attachToRecyclerView(this)
@@ -78,20 +100,34 @@ internal class CarouselAdapter<T : Any>(
     }
 
     override fun getItemCount(): Int = if (hasData) 1 else 0
+}
 
-    private class HorizontalSpacingDecoration(private val spacingPx: Int) :
-        RecyclerView.ItemDecoration() {
-        override fun getItemOffsets(
-            outRect: Rect,
-            view: View,
-            parent: RecyclerView,
-            state: RecyclerView.State
-        ) {
-            val pos = parent.getChildAdapterPosition(view)
-            if (pos == RecyclerView.NO_POSITION) return
-            val last = (parent.adapter?.itemCount ?: 0) - 1
-            outRect.right = if (pos == last) 0 else spacingPx
+class NestedCarouselRecyclerView @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyleAttr: Int = 0
+) : RecyclerView(context, attrs, defStyleAttr) {
+
+    init {
+        isNestedScrollingEnabled = false
+    }
+
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+                parent?.requestDisallowInterceptTouchEventRecursive(true)
+            }
+
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                parent?.requestDisallowInterceptTouchEventRecursive(false)
+            }
         }
+        return super.dispatchTouchEvent(event)
+    }
+
+    private fun ViewParent.requestDisallowInterceptTouchEventRecursive(disallowIntercept: Boolean) {
+        requestDisallowInterceptTouchEvent(disallowIntercept)
+        parent?.requestDisallowInterceptTouchEventRecursive(disallowIntercept)
     }
 }
 
