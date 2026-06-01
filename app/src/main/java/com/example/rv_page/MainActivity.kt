@@ -68,9 +68,6 @@ class MainActivity : AppCompatActivity() {
                     heightDp = 132
                     itemSpacingDp = 12
                     paddingBottomDp = 8
-                    layoutManager {
-                        LinearLayoutManager(this@MainActivity, LinearLayoutManager.VERTICAL,false)
-                    }
                     snap = CarouselSnap.LINEAR
                     onBind { itemBinding, item, _ ->
                         itemBinding.titleText.text = item.title
