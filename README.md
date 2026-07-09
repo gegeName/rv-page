@@ -16,7 +16,7 @@ dependencies {
 
 ```kotlin
 dependencies {
-    implementation("com.github.<USER>.<REPO>:rv-page:<TAG>")
+    implementation("com.github.gegeName:rv-page:<version>")
 }
 ```
 
